@@ -21,7 +21,8 @@
             android:paddingTop="16dp"
             android:textAppearance="?android:textAppearanceLarge"
             android:textSize="30sp"
-            tools:text="Disaster in the Indian ocean"/>
+            tools:text="Disaster in the Indian ocean"
+            tools:ignore="UnusedAttribute"/>
 
         <LinearLayout
             android:id="@+id/parsed_content_article"
@@ -41,7 +42,8 @@
             android:paddingRight="16dp"
             android:textAllCaps="true"
             android:textAppearance="?android:textAppearanceSmall"
-            tools:text="12 Mar 2018"/>
+            tools:text="12 Mar 2018"
+            tools:ignore="RtlSymmetry,UnusedAttribute"/>
 
     </LinearLayout>
 

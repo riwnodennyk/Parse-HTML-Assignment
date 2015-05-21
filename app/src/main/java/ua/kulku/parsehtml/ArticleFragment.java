@@ -37,13 +37,11 @@ public class ArticleFragment extends Fragment {
 
     private final Api mApi = new RestAdapter.Builder()
             .setEndpoint("http://api.naij.com")
-//            .setLogLevel(RestAdapter.LogLevel.FULL)
             .build()
             .create(Api.class);
     private LayoutInflater mInflater;
     private LinearLayout mCreatable;
     private LinkedList<ImageView> mImageViews = new LinkedList<>();
-    private ScrollView mScrollView;
 
     public ArticleFragment() {
     }
@@ -54,23 +52,24 @@ public class ArticleFragment extends Fragment {
         return inflater.inflate(R.layout.fragment_article, container, false);
     }
 
+    @SuppressWarnings("ConstantConditions")
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         mCreatable = (LinearLayout) getView().findViewById(R.id.parsed_content_article);
         mInflater = LayoutInflater.from(getActivity());
-        mScrollView = (ScrollView) getView();
+        final ScrollView scrollView = (ScrollView) getView();
         final ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
-        mScrollView.getViewTreeObserver()
+        scrollView.getViewTreeObserver()
                 .addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
                     @Override
                     public void onScrollChanged() {
-                        boolean anyImageVisibleOnScreen = isAnyImageVisibleOnScreen();
+                        boolean shouldShowActionBar = !isAnyImageViewVisibleOnScreen();
                         @SuppressWarnings("ConstantConditions") boolean showing = actionBar.isShowing();
-                        if (anyImageVisibleOnScreen && showing) {
-                            actionBar.hide();
-                        } else if (!anyImageVisibleOnScreen && !showing) {
+                        if (shouldShowActionBar && !showing) {
                             actionBar.show();
+                        } else if (!shouldShowActionBar && showing) {
+                            actionBar.hide();
                         }
                     }
                 });
@@ -93,7 +92,7 @@ public class ArticleFragment extends Fragment {
 
     }
 
-    private boolean isAnyImageVisibleOnScreen() {
+    private boolean isAnyImageViewVisibleOnScreen() {
         for (ImageView imageView : mImageViews) {
             boolean isVisibleOnScreen = imageView.getGlobalVisibleRect(new Rect(0, 0, imageView.getWidth(), imageView.getHeight()));
             if (isVisibleOnScreen) return true;
@@ -101,7 +100,7 @@ public class ArticleFragment extends Fragment {
         return false;
     }
 
-    private TextView textBlock(Element element) {
+    private TextView generateTextView(Element element) {
         TextView textView = (TextView) mInflater.inflate(R.layout.part_text_block, mCreatable, false);
         textView.setText(Html.fromHtml(element.html()));
         return textView;
@@ -120,36 +119,37 @@ public class ArticleFragment extends Fragment {
     private View viewBlock(Element element) {
         if (element == null) {
             return null;
-        } //todo extract constants "p" "a" "img"
+        }
 
         if ("p".equals(element.tagName())) {
             if (element.children().size() == 1) {
                 Element presumableA = element.child(0);
-                if (presumableA.tagName().equals("a")) {
+                if ("a".equals(presumableA.tagName())) {
                     if (presumableA.children().size() == 1) {
                         Element presumableImg = presumableA.children().get(0);
-                        if (presumableImg.tagName().equals("img")) {
-                            return imageViewBlock(presumableImg);
+                        if ("img".equals(presumableImg.tagName())) {
+                            return generateImageView(presumableImg);
                         }
                     }
                 }
             }
 
-            return textBlock(element);
+            return generateTextView(element);
         }
 
-        //todo get youtube video id -> Youtube library
+//        if ("iframe".equals(element.tagName())) {
+//            String videoId = "www.youtube.com/embed/yF0yPOhcHIk";
+//     todo      create YouTubePlayerView
+//        }
 
         return null;
     }
 
-    private ImageView imageViewBlock(Element img) {
+    private ImageView generateImageView(Element img) {
         ImageView imageView = (ImageView) mInflater.inflate(R.layout.part_image_view_block, mCreatable, false);
         String src = img.attr("src");
         Picasso.with(getActivity())
                 .load(src)
-//                .centerCrop()
-//                .fit()
                 .into(imageView);
         mImageViews.add(imageView);
         return imageView;
