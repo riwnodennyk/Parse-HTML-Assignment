@@ -6,13 +6,15 @@ import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import com.squareup.picasso.Picasso;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
 
 import retrofit.RestAdapter;
 import rx.android.schedulers.AndroidSchedulers;
@@ -44,55 +46,75 @@ public class ArticleFragment extends Fragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+        mCreatable = (LinearLayout) getView().findViewById(R.id.parsed_content_article);
+        mInflater = LayoutInflater.from(getActivity());
+
         mApi.getArticle()
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Action1<Article>() {
                     @Override
                     public void call(Article article) {
+                        ((TextView) getView().findViewById(R.id.title_article)).setText(article.title);
+
                         String content = article.content;
-                        visualizeArticleBody(content);
+                        Document doc = Jsoup.parse(content);
+                        final Element root = doc.child(0).child(1);
+                        addViewBlocksForChildren(root);
                     }
                 });
     }
 
-    private void visualizeArticleBody(String content) {
-        visualizeAsTextView(content);
-        visualizeAsParsedContent(content);
-    }
-
-    private void visualizeAsParsedContent(String content) {
-        mCreatable = (LinearLayout) getView().findViewById(R.id.parsed_content_article);
-
-        //get all tags of p -> TextView (handles bold and italic)
-
-        //get image srcs -> ImageView + Picasso
-
-        //get youtube video id -> Youtube library
-
-        mInflater = LayoutInflater.from(getActivity());
-        Document doc = Jsoup.parse(content);
-        final Element root = doc.child(0).child(1);
-        callThem(root);
-    }
-
-    private void appendTextBlock(Element element) {
+    private TextView textBlock(Element element) {
         TextView textView = (TextView) mInflater.inflate(R.layout.part_text_block, mCreatable, false);
         textView.setText(Html.fromHtml(element.html()));
-        mCreatable.addView(textView);
+        return textView;
     }
 
-    private void visualizeAsTextView(String content) {
-        TextView textView = (TextView) getView().findViewById(R.id.text_view_content_article);
-        textView.setText(Html.fromHtml(content));
+    private void addViewBlocksForChildren(Element root) {
+        View view = viewBlock(root);
+        if (view != null)
+            mCreatable.addView(view);
+
+        for (Element element : root.children()) {
+            addViewBlocksForChildren(element);
+        }
     }
 
-    private void callThem(Node node) {
-        if (node instanceof Element && "p".equals(((Element) node).tagName())) { //todo extract constant
-            appendTextBlock((Element) node);
+    private View viewBlock(Element element) {
+        if (element == null) {
+            return null;
+        } //todo extract constants "p" "a" "img"
+
+        if ("p".equals(element.tagName())) {
+            if (element.children().size() == 1) {
+                Element presumableA = element.child(0);
+                if (presumableA.tagName().equals("a")) {
+                    if (presumableA.children().size() == 1) {
+                        Element presumableImg = presumableA.children().get(0);
+                        if (presumableImg.tagName().equals("img")) {
+                            return imageViewBlock(presumableImg);
+                        }
+                    }
+                }
+            }
+
+            return textBlock(element);
         }
-        for (Node element : node.childNodes()) {
-            callThem(element);
-        }
+
+        //todo get youtube video id -> Youtube library
+
+        return null;
+    }
+
+    private ImageView imageViewBlock(Element img) {
+        ImageView imageView = (ImageView) mInflater.inflate(R.layout.part_image_view_block, mCreatable, false);
+        String src = img.attr("src");
+        Picasso.with(getActivity())
+                .load(src)
+//                .centerCrop()
+//                .fit()
+                .into(imageView);
+        return imageView;
     }
 
 }
