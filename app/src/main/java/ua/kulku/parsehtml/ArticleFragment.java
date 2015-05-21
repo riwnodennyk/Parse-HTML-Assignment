@@ -1,13 +1,18 @@
 package ua.kulku.parsehtml;
 
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v7.app.ActionBar;
+import android.support.v7.app.AppCompatActivity;
 import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
@@ -18,6 +23,7 @@ import org.jsoup.nodes.Element;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.LinkedList;
 
 import retrofit.RestAdapter;
 import rx.android.schedulers.AndroidSchedulers;
@@ -36,6 +42,8 @@ public class ArticleFragment extends Fragment {
             .create(Api.class);
     private LayoutInflater mInflater;
     private LinearLayout mCreatable;
+    private LinkedList<ImageView> mImageViews = new LinkedList<>();
+    private ScrollView mScrollView;
 
     public ArticleFragment() {
     }
@@ -51,6 +59,21 @@ public class ArticleFragment extends Fragment {
         super.onActivityCreated(savedInstanceState);
         mCreatable = (LinearLayout) getView().findViewById(R.id.parsed_content_article);
         mInflater = LayoutInflater.from(getActivity());
+        mScrollView = (ScrollView) getView();
+        final ActionBar actionBar = ((AppCompatActivity) getActivity()).getSupportActionBar();
+        mScrollView.getViewTreeObserver()
+                .addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
+                    @Override
+                    public void onScrollChanged() {
+                        boolean anyImageVisibleOnScreen = isAnyImageVisibleOnScreen();
+                        @SuppressWarnings("ConstantConditions") boolean showing = actionBar.isShowing();
+                        if (anyImageVisibleOnScreen && showing) {
+                            actionBar.hide();
+                        } else if (!anyImageVisibleOnScreen && !showing) {
+                            actionBar.show();
+                        }
+                    }
+                });
 
         mApi.getArticle()
                 .observeOn(AndroidSchedulers.mainThread())
@@ -67,6 +90,15 @@ public class ArticleFragment extends Fragment {
                         addViewBlocksForChildren(root);
                     }
                 });
+
+    }
+
+    private boolean isAnyImageVisibleOnScreen() {
+        for (ImageView imageView : mImageViews) {
+            boolean isVisibleOnScreen = imageView.getGlobalVisibleRect(new Rect(0, 0, imageView.getWidth(), imageView.getHeight()));
+            if (isVisibleOnScreen) return true;
+        }
+        return false;
     }
 
     private TextView textBlock(Element element) {
@@ -119,6 +151,7 @@ public class ArticleFragment extends Fragment {
 //                .centerCrop()
 //                .fit()
                 .into(imageView);
+        mImageViews.add(imageView);
         return imageView;
     }
 
