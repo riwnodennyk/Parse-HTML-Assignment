@@ -16,6 +16,9 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
 import retrofit.RestAdapter;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
@@ -56,8 +59,10 @@ public class ArticleFragment extends Fragment {
                     public void call(Article article) {
                         ((TextView) getView().findViewById(R.id.title_article)).setText(article.title);
 
-                        String content = article.content;
-                        Document doc = Jsoup.parse(content);
+                        String createdDate = SimpleDateFormat.getDateInstance(DateFormat.SHORT).format(article.created * 1000);
+                        ((TextView) getView().findViewById(R.id.date_article)).setText(createdDate);
+
+                        Document doc = Jsoup.parse(article.content);
                         final Element root = doc.child(0).child(1);
                         addViewBlocksForChildren(root);
                     }
